@@ -1,9 +1,29 @@
 import telebot
 import requests
+import os
 from telebot import types
+from fastapi import FastAPI
+from aiogram import types, Dispatcher, Bot
 
+app = FastAPI()
+WEBHOOK_PATH = f"/bot/{os.environ['TELEGRAM_BOT_TOKEN']}"
+WEBHOOK_URL = f"{os.environ['SERVER_URL']}{WEBHOOK_PATH}"
 bot = telebot.TeleBot('7144526471:AAG2XsY2tw9lJUVbx_x4z2Rhssiuk6IAaCg')
+dp = Dispatcher(bot)
 last_message_id = 0
+
+
+@app.on_event("startup")
+async def on_startup():
+    webhook_info = await bot.get_webhook_info()
+    if webhook_info.url != WEBHOOK_URL:
+        await bot.set_webhook(url=WEBHOOK_URL)
+
+
+@app.post(WEBHOOK_PATH)
+async def bot_webhook(update: dict):
+    telegram_update = types.Update(**update)
+    Bot.seC
 
 
 @bot.message_handler(commands=['margulis'])
@@ -12,7 +32,7 @@ def main(message):
     image = open(r'KKposter.png', 'rb')
     markup = types.InlineKeyboardMarkup()
     registrate_btn = types.InlineKeyboardButton("Зарегистрироваться", login_url=types.LoginUrl(
-        url="https://kk-backend-vzw2bewdaa-ew.a.run.app/main"))
+        url="https://kk-backend-production.up.railway.app/main"))
     markup.row(registrate_btn)
     cancel_btn = types.InlineKeyboardButton("❌ Отменить ", callback_data="cancel")
     revert_btn = types.InlineKeyboardButton("🔃 Вернуть", callback_data="revert")
