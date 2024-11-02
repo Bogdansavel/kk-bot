@@ -98,7 +98,7 @@ async def register(callback_query: CallbackQuery):
             for message in response.json()["messages"]:
                 await bot.edit_message_caption(message_id=message["messageId"],
                                                    chat_id=message["chatId"],
-                                                   caption=caption+f"\n\n{response.json()["membersCount"]}/{max} человек",
+                                                   caption=caption+f"\n\n{response.json()['membersCount']}/{max} человек",
                                                    reply_markup=kb2.as_markup())
     else:
         text = "Что-то пошло не так!"
@@ -117,7 +117,7 @@ async def unregister(callback_query: CallbackQuery):
         for message in response.json()["messages"]:
             await bot.edit_message_caption(message_id=message["messageId"],
                                                chat_id=message["chatId"],
-                                               caption=caption+f"\n\n{response.json()["membersCount"]}/{max} человек",
+                                               caption=caption+f"\n\n{response.json()['membersCount']}/{max} человек",
                                                reply_markup=kb2.as_markup())
     elif response.status_code == 404:
         text = "Вы еще не зарегестрированны на этот киноклуб"
