@@ -46,6 +46,11 @@ async def start(message: types.Message):
     await bot.send_photo(chat_id=message.chat.id, photo=FSInputFile(path='RateMidsommar.png'), reply_markup=kbrate.as_markup())
 
 
+@dp.message(Command("health"))
+async def start(message: types.Message):
+    await message.answer(text="Alive!")
+
+
 @dp.message(Command("test"))
 async def test(message: types.Message):
     if message.from_user.username == "fanboyDan":
