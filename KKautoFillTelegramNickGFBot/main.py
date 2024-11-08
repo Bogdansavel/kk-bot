@@ -1,6 +1,6 @@
 import requests
 from aiogram import Bot, Dispatcher, types, Router, F
-from aiogram.types import CallbackQuery, FSInputFile
+from aiogram.types import CallbackQuery, FSInputFile, InputMediaPhoto
 from aiogram.types.web_app_info import WebAppInfo
 from aiogram.client.default import DefaultBotProperties
 from aiogram.filters import CommandStart, Command
@@ -11,12 +11,14 @@ from aiogram.filters.callback_data import CallbackData
 import asyncio
 import logging
 
+from requests import Response
+
 dp = Dispatcher()
 router = Router(name=__name__)
 dp.include_router(router)
 bot = Bot('7284814693:AAEQ2YLnQ2ukjFprZ5tE42lvTZNR7No3t1I', default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
-# baseUrl = "http://localhost:8080"
+# baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
+baseUrl = "http://localhost:8080"
 
 
 class CallBackMethod(CallbackData, prefix="method-name"):
@@ -24,20 +26,32 @@ class CallBackMethod(CallbackData, prefix="method-name"):
 
 
 kb = InlineKeyboardBuilder()
-# kb.button(text='Приду', callback_data=CallBackMethod(string='register').pack())
-# kb.button(text='Не приду', callback_data=CallBackMethod(string='unregister').pack())
 kb.button(text='Кто идет?', web_app=WebAppInfo(url='https://bogdansavel.github.io/kk-bot-front/#/members'))
+
+kbrate = InlineKeyboardBuilder()
+kbrate.button(text='Оценить', web_app=WebAppInfo(url='https://bogdansavel.github.io/kk-bot-front/#/rates/13acceca-3ccd-40b4-aec7-1d05e78746ef'))
 
 kb2 = InlineKeyboardBuilder()
 kb2.button(text='Приду', callback_data=CallBackMethod(string='register').pack())
 kb2.button(text='Не приду', callback_data=CallBackMethod(string='unregister').pack())
 kb2.adjust(2)
-caption = "Хэллоуинский спешл Киноклуба в Кракове!\n\nСмотрим, обсуждаем, рассуждаем и делимся своими впечатлениями о фильме \"Солнцестояние\". В кругу людей, любящих кино.\n\nВоскресенье.\n3 ноября. 17:00.\nКраков, Św. Krzyża 11.\n\nДля регистрации нажми ниже \"Приду\". Ограничение на количество человек нестрогое.\n\nХэллоуинские маски, наряды, свечи и украшения приветствуются!"
+caption = "<b>Хэллоуинский спешл Киноклуба в Кракове!</b>\n\nСмотрим, обсуждаем, рассуждаем и делимся своими впечатлениями о фильме \"Солнцестояние\". В кругу людей, любящих кино.\n\nВоскресенье.\n3 ноября. 17:00.\nКраков, Św. Krzyża 11.\n\nХэллоуинские маски, наряды, свечи и украшения приветствуются!"
 max = 15
 
 
-@dp.message(Command("event"))
+@dp.message(Command("start"))
 async def start(message: types.Message):
+    await bot.send_photo(chat_id=message.chat.id, photo=FSInputFile(path='RateMidsommar.png'), reply_markup=kbrate.as_markup())
+
+
+@dp.message(Command("test"))
+async def test(message: types.Message):
+    if message.from_user.username == "fanboyDan":
+        await bot.send_photo("-1002499953530", photo=FSInputFile(path='RateMidsommar.png'), message_thread_id=173, caption="<a href='t.me/kk_krakow_bot?start==""'>Оценить фильм!</a>", parse_mode="HTML")
+
+
+@dp.message(Command("event"))
+async def event(message: types.Message):
     if message.from_user.username == "fanboyDan":
         message = await bot.send_photo("@kkkrakow", photo=FSInputFile(path='KKposter.png'),
                                        caption=caption + "\n\n0/15 человек",
@@ -72,8 +86,14 @@ async def stop_event(message: types.Message):
                                         caption=caption)
 
 
+@dp.message(Command("rate"))
+async def rate(message: types.Message):
+    if message.from_user.username == "fanboyDan":
+        await message.answer(photo=FSInputFile(path='KKposter.png'), reply_markup=kbrate.as_markup(), text="rate")
+
+
 @dp.message(Command("startEvent"))
-async def stop_event(message: types.Message):
+async def start_event(message: types.Message):
     if message.from_user.username == "fanboyDan":
         url = baseUrl + '/event'
         response = requests.get(url)
@@ -84,9 +104,23 @@ async def stop_event(message: types.Message):
                                                reply_markup=kb2.as_markup())
 
 
+@dp.message(Command("update"))
+async def update_event_info(message: types.Message):
+    if message.from_user.username == "fanboyDan":
+        url = baseUrl + '/message/current'
+        response = requests.get(url)
+        if response.ok:
+            for m in response.json():
+                await bot.edit_message_media(media=InputMediaPhoto(media=FSInputFile(path='KKposter.png'),
+                                                                   caption=caption),
+                                             message_id=m["messageId"], chat_id=m["chatId"])
+                await message.answer("Update has been done successfully")
+        else:
+            await message.answer("Somthing went wrong")
+
+
 @router.callback_query(CallBackMethod.filter(F.string == 'register'))
 async def register(callback_query: CallbackQuery):
-    text = ""
     url = baseUrl + '/register'
     body = {'username': callback_query.from_user.username}
     response = requests.post(url, json=body)
@@ -95,35 +129,36 @@ async def register(callback_query: CallbackQuery):
             text = "Вы уже зарегестрированны на этот киноклуб."
         else:
             text = f"Cпасибо за регистрацию!\n\n Если у вас изменятся планы, не забудьте вернуться сюда, и нажать кнопку \"Не приду\"."
-            for message in response.json()["messages"]:
-                await bot.edit_message_caption(message_id=message["messageId"],
-                                                   chat_id=message["chatId"],
-                                                   caption=caption+f"\n\n{response.json()['membersCount']}/{max} человек",
-                                                   reply_markup=kb2.as_markup())
+            await update_event_message(response)
     else:
         text = "Что-то пошло не так!"
-
     await callback_query.answer(text=text, show_alert=True)
 
 
 @router.callback_query(CallBackMethod.filter(F.string == 'unregister'))
 async def unregister(callback_query: CallbackQuery):
-    text = ""
     url = baseUrl + '/unregister'
     body = {'username': callback_query.from_user.username}
     response = requests.post(url, json=body)
     if response.ok:
         text = "Регистрация отменена.\nCпасибо что уведомили!"
         for message in response.json()["messages"]:
-            await bot.edit_message_caption(message_id=message["messageId"],
-                                               chat_id=message["chatId"],
-                                               caption=caption+f"\n\n{response.json()['membersCount']}/{max} человек",
-                                               reply_markup=kb2.as_markup())
+            await update_event_message(response)
     elif response.status_code == 404:
         text = "Вы еще не зарегестрированны на этот киноклуб"
     else:
         text = "Что-то пошло не так!"
     await callback_query.answer(text=text, show_alert=True)
+
+
+async def update_event_message(response: Response):
+    usernames = list(map(lambda m: "@" + m["username"], response.json()['members']))
+    for message in response.json()["messages"]:
+        await bot.edit_message_caption(message_id=message["messageId"],
+                                       chat_id=message["chatId"],
+                                       caption=caption + f"\n\n{response.json()['membersCount']}/{max} человек\n\n" + "\n\n".join(
+                                           usernames),
+                                       reply_markup=kb2.as_markup())
 
 
 async def main() -> None:
