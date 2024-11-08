@@ -18,7 +18,7 @@ router = Router(name=__name__)
 dp.include_router(router)
 token = "7284814693:AAEQ2YLnQ2ukjFprZ5tE42lvTZNR7No3t1I"
 tokenTest = "7869224203:AAGzt9yufaPGqYEk5DQcyVbFJ5t6BSiZ5_A"
-bot = Bot(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+bot = Bot(tokenTest, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 # baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
 baseUrl = "http://localhost:8080"
 
@@ -160,7 +160,8 @@ async def unregister(callback_query: CallbackQuery):
 
 
 async def update_event_message(response: Response):
-    usernames = list(map(lambda m: "@" + m["username"], response.json()['members']))
+    usernames = list(map(lambda m: "@" + m["username"] + (" впервые" if m["freshBlood"] else ""),
+                         response.json()['members']))
     for message in response.json()["messages"]:
         final_caption = caption + f"\n\n{response.json()['membersCount']}/{max} человек"
         if message["chatId"] == "-1002499953530":
