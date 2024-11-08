@@ -16,7 +16,9 @@ from requests import Response
 dp = Dispatcher()
 router = Router(name=__name__)
 dp.include_router(router)
-bot = Bot('7284814693:AAEQ2YLnQ2ukjFprZ5tE42lvTZNR7No3t1I', default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+token = "7284814693:AAEQ2YLnQ2ukjFprZ5tE42lvTZNR7No3t1I"
+tokenTest = "7869224203:AAGzt9yufaPGqYEk5DQcyVbFJ5t6BSiZ5_A"
+bot = Bot(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 # baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
 baseUrl = "http://localhost:8080"
 
@@ -47,7 +49,13 @@ async def start(message: types.Message):
 @dp.message(Command("test"))
 async def test(message: types.Message):
     if message.from_user.username == "fanboyDan":
-        await bot.send_photo("-1002499953530", photo=FSInputFile(path='RateMidsommar.png'), message_thread_id=173, caption="<a href='t.me/kk_krakow_bot?start==""'>Оценить фильм!</a>", parse_mode="HTML")
+        message = await bot.send_photo(message.chat.id, photo=FSInputFile(path='KKposter.png'),
+                                       caption=caption + "\n\n0/15 человек",
+                                       parse_mode="HTML",
+                                       reply_markup=kb2.as_markup())
+        url = baseUrl + '/telegram-message'
+        body = {'messageId': message.message_id, 'chatId': message.chat.id}
+        requests.post(url, json=body)
 
 
 @dp.message(Command("event"))
@@ -154,10 +162,12 @@ async def unregister(callback_query: CallbackQuery):
 async def update_event_message(response: Response):
     usernames = list(map(lambda m: "@" + m["username"], response.json()['members']))
     for message in response.json()["messages"]:
+        final_caption = caption + f"\n\n{response.json()['membersCount']}/{max} человек"
+        if message["chatId"] == "-1002499953530":
+            final_caption = final_caption + "\n\n" + "\n\n".join(usernames)
         await bot.edit_message_caption(message_id=message["messageId"],
                                        chat_id=message["chatId"],
-                                       caption=caption + f"\n\n{response.json()['membersCount']}/{max} человек\n\n" + "\n\n".join(
-                                           usernames),
+                                       caption=final_caption,
                                        reply_markup=kb2.as_markup())
 
 
