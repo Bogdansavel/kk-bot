@@ -3,7 +3,7 @@ from aiogram import Bot, Dispatcher, types, Router, F
 from aiogram.types import CallbackQuery, FSInputFile, InputMediaPhoto
 from aiogram.types.web_app_info import WebAppInfo
 from aiogram.client.default import DefaultBotProperties
-from aiogram.filters import CommandStart, Command
+from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.enums import ParseMode
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters.callback_data import CallbackData
@@ -18,9 +18,9 @@ router = Router(name=__name__)
 dp.include_router(router)
 token = "7284814693:AAEQ2YLnQ2ukjFprZ5tE42lvTZNR7No3t1I"
 tokenTest = "7869224203:AAGzt9yufaPGqYEk5DQcyVbFJ5t6BSiZ5_A"
-bot = Bot(tokenTest, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-# baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
-baseUrl = "http://localhost:8080"
+bot = Bot(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
+# baseUrl = "http://localhost:8080"
 
 
 class CallBackMethod(CallbackData, prefix="method-name"):
@@ -30,20 +30,23 @@ class CallBackMethod(CallbackData, prefix="method-name"):
 kb = InlineKeyboardBuilder()
 kb.button(text='Кто идет?', web_app=WebAppInfo(url='https://bogdansavel.github.io/kk-bot-front/#/members'))
 
-kbrate = InlineKeyboardBuilder()
-kbrate.button(text='Оценить', web_app=WebAppInfo(url='https://bogdansavel.github.io/kk-bot-front/#/rates/13acceca-3ccd-40b4-aec7-1d05e78746ef'))
-
 kb2 = InlineKeyboardBuilder()
 kb2.button(text='Приду', callback_data=CallBackMethod(string='register').pack())
 kb2.button(text='Не приду', callback_data=CallBackMethod(string='unregister').pack())
 kb2.adjust(2)
-caption = "<b>Хэллоуинский спешл Киноклуба в Кракове!</b>\n\nСмотрим, обсуждаем, рассуждаем и делимся своими впечатлениями о фильме \"Солнцестояние\". В кругу людей, любящих кино.\n\nВоскресенье.\n3 ноября. 17:00.\nКраков, Św. Krzyża 11.\n\nХэллоуинские маски, наряды, свечи и украшения приветствуются!"
+caption = "<b>Киноклуб в Кракове!</b>\n\nСмотрим, обсуждаем, рассуждаем и делимся своими впечатлениями об аниме \"Небо над Берлином\". В кругу людей, любящих кино.\n\nВоскресенье.\n1 декабря. 17:00.\nКраков, Św. Krzyża 11.\n\nЯзык: русская озвучка.\nОграничение колличества учатников нестрогое."
 max = 15
 
 
 @dp.message(Command("start"))
-async def start(message: types.Message):
-    await bot.send_photo(chat_id=message.chat.id, photo=FSInputFile(path='RateMidsommar.png'), reply_markup=kbrate.as_markup())
+async def start(message: types.Message, command: CommandObject):
+    movieId = command.args
+    url = baseUrl + '/movie/' + movieId
+    response = requests.get(url)
+    kbrate = InlineKeyboardBuilder()
+    kbrate.button(text='Оценить', web_app=WebAppInfo(
+        url=("https://bogdansavel.github.io/kk-bot-front/#/rates/" + command.args)))
+    await bot.send_photo(chat_id=message.chat.id, photo=FSInputFile(path=response.json()["photoName"]), reply_markup=kbrate.as_markup())
 
 
 @dp.message(Command("health"))
@@ -61,6 +64,12 @@ async def test(message: types.Message):
         url = baseUrl + '/telegram-message'
         body = {'messageId': message.message_id, 'chatId': message.chat.id}
         requests.post(url, json=body)
+
+
+@dp.message(Command("sendRateMessage"))
+async def test(message: types.Message):
+    if message.from_user.username == "fanboyDan":
+        await bot.send_photo("-1002499953530", photo=FSInputFile(path='TaxiDriverRate.png'), message_thread_id=173, caption="<a href='t.me/kk_krakow_bot?start==bcfbb67f-a005-4c24-92c8-2eb3de65b293""'>Оценить</a>", parse_mode="HTML")
 
 
 @dp.message(Command("event"))
@@ -99,12 +108,6 @@ async def stop_event(message: types.Message):
                                         caption=caption)
 
 
-@dp.message(Command("rate"))
-async def rate(message: types.Message):
-    if message.from_user.username == "fanboyDan":
-        await message.answer(photo=FSInputFile(path='KKposter.png'), reply_markup=kbrate.as_markup(), text="rate")
-
-
 @dp.message(Command("startEvent"))
 async def start_event(message: types.Message):
     if message.from_user.username == "fanboyDan":
@@ -135,11 +138,11 @@ async def update_event_info(message: types.Message):
 @router.callback_query(CallBackMethod.filter(F.string == 'register'))
 async def register(callback_query: CallbackQuery):
     url = baseUrl + '/register'
-    body = {'username': callback_query.from_user.username}
+    body = {'username': callback_query.from_user.username, 'firstName': callback_query.from_user.first_name}
     response = requests.post(url, json=body)
     if response.ok:
         if response.json()["isAlreadyRegistered"] == True:
-            text = "Вы уже зарегестрированны на этот киноклуб."
+            text = "Вы уже зарегестрированы на это мероприятие."
         else:
             text = f"Cпасибо за регистрацию!\n\n Если у вас изменятся планы, не забудьте вернуться сюда, и нажать кнопку \"Не приду\"."
             await update_event_message(response)
@@ -155,26 +158,29 @@ async def unregister(callback_query: CallbackQuery):
     response = requests.post(url, json=body)
     if response.ok:
         text = "Регистрация отменена.\nCпасибо что уведомили!"
-        for message in response.json()["messages"]:
-            await update_event_message(response)
+        await update_event_message(response)
     elif response.status_code == 404:
-        text = "Вы еще не зарегестрированны на этот киноклуб"
+        text = "Cпасибо что уведомили!"
     else:
         text = "Что-то пошло не так!"
     await callback_query.answer(text=text, show_alert=True)
 
 
 async def update_event_message(response: Response):
-    usernames = list(map(lambda m: "@" + m["username"] + (" впервые" if m["freshBlood"] else ""),
-                         response.json()['members']))
+    usernames = list(map(lambda m: generate_name(m), response.json()['members']))
     for message in response.json()["messages"]:
         final_caption = caption + f"\n\n{response.json()['membersCount']}/{max} человек"
         if message["chatId"] == "-1002499953530":
-            final_caption = final_caption + "\n\n" + "\n\n".join(usernames)
+            final_caption = final_caption + "\n\n" + "\n".join(usernames)
         await bot.edit_message_caption(message_id=message["messageId"],
                                        chat_id=message["chatId"],
                                        caption=final_caption,
                                        reply_markup=kb2.as_markup())
+
+
+def generate_name(m):
+    name = m["username"] if m["firstName"] is None else m["firstName"]
+    return name if m["username"] is None else "<a href=\'https://t.me/" + m["username"] + "\'>" + name + "</a>"
 
 
 async def main() -> None:
