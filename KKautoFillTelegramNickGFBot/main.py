@@ -180,7 +180,8 @@ async def update_event_message(response: Response):
 
 def generate_name(m):
     name = m["username"] if m["firstName"] is None else m["firstName"]
-    return name if m["username"] is None else "<a href=\'https://t.me/" + m["username"] + "\'>" + name + "</a>"
+    name = name if m["username"] is None else "<a href=\'https://t.me/" + m["username"] + "\'>" + name + "</a>"
+    return name + " впервые!" if m["freshBlood"] is True else name
 
 
 async def main() -> None:
