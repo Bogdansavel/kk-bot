@@ -34,7 +34,7 @@ kb2 = InlineKeyboardBuilder()
 kb2.button(text='Приду', callback_data=CallBackMethod(string='register').pack())
 kb2.button(text='Не приду', callback_data=CallBackMethod(string='unregister').pack())
 kb2.adjust(2)
-caption = "<b>Киноклуб в Кракове!</b>\n\nСмотрим, обсуждаем, рассуждаем и делимся своими впечатлениями о фильме \"Дочери Ольфы\". В кругу людей, любящих кино.\n\nВоскресенье.\n8 декабря. 17:00.\nКраков, Św. Krzyża 11.\n\nЯзык: английские субтитры.\n\nОграничение количества учаcтников нестрогое."
+caption = "<b>Киноклуб в Кракове!</b>\n\nСмотрим, обсуждаем, рассуждаем и делимся своими впечатлениями о фильме \"Малхолланд Драйв\". В кругу людей, любящих кино.\n\nВоскресенье.\n15 декабря. 17:00.\nКраков, Św. Krzyża 11.\n\nЯзык: русские субтитры.\n\nОграничение количества учаcтников нестрогое."
 max = 15
 
 
@@ -171,7 +171,7 @@ async def update_event_message(response: Response):
     for message in response.json()["messages"]:
         final_caption = caption + f"\n\n{response.json()['membersCount']}/{max} человек"
         if message["chatId"] == "-1002499953530":
-            final_caption = final_caption + "\n\n" + "\n".join(usernames)
+            final_caption = final_caption + "\n" + "\n".join(usernames)
         await bot.edit_message_caption(message_id=message["messageId"],
                                        chat_id=message["chatId"],
                                        caption=final_caption,
