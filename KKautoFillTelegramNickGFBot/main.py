@@ -34,7 +34,7 @@ kb2 = InlineKeyboardBuilder()
 kb2.button(text='Приду', callback_data=CallBackMethod(string='register').pack())
 kb2.button(text='Не приду', callback_data=CallBackMethod(string='unregister').pack())
 kb2.adjust(2)
-caption = "<b>Киноклуб в Кракове!</b>\n\nСмотрим, обсуждаем, рассуждаем и делимся своими впечатлениями о фильме \"Мечтатели\"! В кругу людей, любящих кино.\n\nВоскресенье.\n5 января. 17:00.\nКраков, Łobzowska 15/15.\n\nЯзык: русские субтитры.\nСтоимость: 130зл / количество пришедших.\nОграничение количества учаcтников нестрогое."
+caption = "<b>2 года Киноклубу в Кракове!</b>\n\nВ этот раз мы собираемся не для просмотра фильма, а для поздравления друг друга со второй годовщиной нашего замечательного клуба! Приходи поздравить себя и своих друзей из Киноклуба. Мы собираемся играть в игры, разгадывать квизы и много много общаться! Приходи и приноси идеи для совместного времяпрепровождения!\n\nВоскресенье.\n12 января. 17:00.\nКраков, Łobzowska 15/15.\n\nСтоимость: 130зл / количество пришедших.\nОграничение количества учаcтников нестрогое."
 max = 15
 
 
@@ -45,7 +45,10 @@ async def start(message: types.Message, command: CommandObject):
     response = requests.get(url)
     kbrate = InlineKeyboardBuilder()
     kbrate.button(text='Оценить', web_app=WebAppInfo(
+        url=("https://bogdansavel.github.io/kk-bot-front/#/rate/" + command.args)))
+    kbrate.button(text='Посмотреть оценки', web_app=WebAppInfo(
         url=("https://bogdansavel.github.io/kk-bot-front/#/rates/" + command.args)))
+    kbrate.adjust(1,1)
     await bot.send_photo(chat_id=message.chat.id, photo=FSInputFile(path=response.json()["photoName"]), reply_markup=kbrate.as_markup())
 
 
