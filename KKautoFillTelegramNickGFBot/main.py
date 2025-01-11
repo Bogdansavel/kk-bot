@@ -141,7 +141,7 @@ async def update_event_info(message: types.Message):
 @router.callback_query(CallBackMethod.filter(F.string == 'register'))
 async def register(callback_query: CallbackQuery):
     url = baseUrl + '/register'
-    body = {'username': callback_query.from_user.username, 'firstName': callback_query.from_user.first_name}
+    body = {'telegramId': callback_query.from_user.id, 'username': callback_query.from_user.username, 'firstName': callback_query.from_user.first_name}
     response = requests.post(url, json=body)
     if response.ok:
         if response.json()["isAlreadyRegistered"] == True:
