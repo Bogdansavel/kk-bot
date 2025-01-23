@@ -1,6 +1,6 @@
 import requests
 from aiogram import Bot, Dispatcher, types, Router, F
-from aiogram.types import CallbackQuery, FSInputFile, InputMediaPhoto
+from aiogram.types import CallbackQuery, FSInputFile, InputMediaPhoto, URLInputFile
 from aiogram.types.web_app_info import WebAppInfo
 from aiogram.client.default import DefaultBotProperties
 from aiogram.filters import CommandStart, Command, CommandObject
@@ -18,9 +18,9 @@ router = Router(name=__name__)
 dp.include_router(router)
 token = "7284814693:AAEQ2YLnQ2ukjFprZ5tE42lvTZNR7No3t1I"
 tokenTest = "7869224203:AAGzt9yufaPGqYEk5DQcyVbFJ5t6BSiZ5_A"
-bot = Bot(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
-# baseUrl = "http://localhost:8080"
+bot = Bot(tokenTest, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+#baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
+baseUrl = "http://localhost:8080"
 
 
 class CallBackMethod(CallbackData, prefix="method-name"):
@@ -34,7 +34,7 @@ kb2 = InlineKeyboardBuilder()
 kb2.button(text='Приду', callback_data=CallBackMethod(string='register').pack())
 kb2.button(text='Не приду', callback_data=CallBackMethod(string='unregister').pack())
 kb2.adjust(2)
-caption = "<b>2 года Киноклубу в Кракове!</b>\n\nВ этот раз мы собираемся не для просмотра фильма, а для поздравления друг друга со второй годовщиной нашего замечательного клуба! Приходи поздравить себя и своих друзей из Киноклуба. Мы собираемся играть в игры, разгадывать квизы и много много общаться! Приходи и приноси идеи для совместного времяпрепровождения!\n\nВоскресенье.\n12 января. 17:00.\nКраков, Łobzowska 15/15.\n\nСтоимость: 130зл / количество пришедших.\nОграничение количества учаcтников нестрогое."
+caption = "<b>Киноклуб в Кракове!</b>\n\nСмотрим, обсуждаем, рассуждаем и делимся своими впечатлениями о фильме \"Догвиль\"! В кругу людей, любящих кино.\n\nВоскресенье.\n19 января. 17:00.\nКраков, Łobzowska 15/15.\n\nЯзык: русская озвучка\nСтоимость: 10зл.\nОграничение количества учаcтников нестрогое."
 max = 15
 
 
@@ -78,21 +78,20 @@ async def test(message: types.Message):
 @dp.message(Command("event"))
 async def event(message: types.Message):
     if message.from_user.username == "fanboyDan":
-        message = await bot.send_photo("@kkkrakow", photo=FSInputFile(path='KKposter.png'),
-                                       caption=caption + "\n\n0/15 человек",
-                                       parse_mode="HTML",
-                                       reply_markup=kb2.as_markup())
-        url = baseUrl + '/telegram-message'
-        body = {'messageId': message.message_id, 'chatId': "@kkkrakow"}
-        requests.post(url, json=body)
-
-        message = await bot.send_photo("-1002499953530", photo=FSInputFile(path='KKposter.png'),
-                                       caption=caption + "\n\n0/15 человек",
-                                       parse_mode="HTML",
-                                       reply_markup=kb2.as_markup())
-        url = baseUrl + '/telegram-message'
-        body = {'messageId': message.message_id, 'chatId': "-1002499953530"}
-        requests.post(url, json=body)
+        url = baseUrl + '/event'
+        response = requests.get(url)
+        if response.ok:
+            for message in response.json()["messages"]:
+                message_tg = await bot.send_photo(message["chatId"], photo=URLInputFile(url=message["posterUrl"]),
+                                                  caption=message["description"] + "\n\n0/15 человек",
+                                                  parse_mode="HTML",
+                                                  reply_markup=kb2.as_markup())
+                url = baseUrl + '/telegram-message'
+                body = {'messageId': message_tg.message_id, 'chatId': message["chatId"]}
+                requests.post(url, json=body)
+        else:
+            text = "Что-то пошло не так!"
+            await message.answer(text=text, show_alert=True)
 
 
 @dp.message(Command("киноклуб"))
@@ -157,7 +156,7 @@ async def register(callback_query: CallbackQuery):
 @router.callback_query(CallBackMethod.filter(F.string == 'unregister'))
 async def unregister(callback_query: CallbackQuery):
     url = baseUrl + '/unregister'
-    body = {'username': callback_query.from_user.username}
+    body = {'telegramId': callback_query.from_user.id, 'username': callback_query.from_user.username, 'firstName': callback_query.from_user.first_name}
     response = requests.post(url, json=body)
     if response.ok:
         text = "Регистрация отменена.\nCпасибо что уведомили!"
