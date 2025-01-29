@@ -18,9 +18,9 @@ router = Router(name=__name__)
 dp.include_router(router)
 token = "7284814693:AAEQ2YLnQ2ukjFprZ5tE42lvTZNR7No3t1I"
 tokenTest = "7869224203:AAGzt9yufaPGqYEk5DQcyVbFJ5t6BSiZ5_A"
-bot = Bot(tokenTest, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-#baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
-baseUrl = "http://localhost:8080"
+bot = Bot(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
+#baseUrl = "http://localhost:8080"
 
 
 class CallBackMethod(CallbackData, prefix="method-name"):
@@ -81,14 +81,21 @@ async def event(message: types.Message):
         url = baseUrl + '/event'
         response = requests.get(url)
         if response.ok:
-            for message in response.json()["messages"]:
-                message_tg = await bot.send_photo(message["chatId"], photo=URLInputFile(url=message["posterUrl"]),
-                                                  caption=message["description"] + "\n\n0/15 человек",
-                                                  parse_mode="HTML",
-                                                  reply_markup=kb2.as_markup())
-                url = baseUrl + '/telegram-message'
-                body = {'messageId': message_tg.message_id, 'chatId': message["chatId"]}
-                requests.post(url, json=body)
+            message = await bot.send_photo("@kkkrakow", photo=URLInputFile(url=response.json()["posterUrl"]),
+                                           caption=response.json()["description"],
+                                           parse_mode="HTML",
+                                           reply_markup=kb2.as_markup())
+            url = baseUrl + '/telegram-message'
+            body = {'messageId': message.message_id, 'chatId': "@kkkrakow"}
+            requests.post(url, json=body)
+
+            message = await bot.send_photo("-1002499953530", photo=URLInputFile(url=response.json()["posterUrl"]),
+                                           caption=response.json()["description"],
+                                           parse_mode="HTML",
+                                           reply_markup=kb2.as_markup())
+            url = baseUrl + '/telegram-message'
+            body = {'messageId': message.message_id, 'chatId': "-1002499953530"}
+            requests.post(url, json=body)
         else:
             text = "Что-то пошло не так!"
             await message.answer(text=text, show_alert=True)
@@ -139,39 +146,43 @@ async def update_event_info(message: types.Message):
 
 @router.callback_query(CallBackMethod.filter(F.string == 'register'))
 async def register(callback_query: CallbackQuery):
-    url = baseUrl + '/register'
-    body = {'telegramId': callback_query.from_user.id, 'username': callback_query.from_user.username, 'firstName': callback_query.from_user.first_name}
-    response = requests.post(url, json=body)
-    if response.ok:
-        if response.json()["isAlreadyRegistered"] == True:
-            text = "Вы уже зарегестрированы на это мероприятие."
-        else:
-            text = f"Cпасибо за регистрацию!\n\n Если у вас изменятся планы, не забудьте вернуться сюда, и нажать кнопку \"Не приду\"."
-            await update_event_message(response)
-    else:
-        text = "Что-то пошло не так!"
+    url = baseUrl + '/event'
+    event_response = requests.get(url)
+    text = "Что-то пошло не так!"
+    if event_response.ok:
+        url = baseUrl + '/register'
+        body = {'telegramId': callback_query.from_user.id, 'username': callback_query.from_user.username, 'firstName': callback_query.from_user.first_name}
+        response = requests.post(url, json=body)
+        if response.ok:
+            if response.json()["isAlreadyRegistered"] == True:
+                text = "Вы уже зарегестрированы на это мероприятие."
+            else:
+                text = f"Cпасибо за регистрацию!\n\n Если у вас изменятся планы, не забудьте вернуться сюда, и нажать кнопку \"Не приду\"."
+                await update_event_message(response, event_response)
     await callback_query.answer(text=text, show_alert=True)
 
 
 @router.callback_query(CallBackMethod.filter(F.string == 'unregister'))
 async def unregister(callback_query: CallbackQuery):
-    url = baseUrl + '/unregister'
-    body = {'telegramId': callback_query.from_user.id, 'username': callback_query.from_user.username, 'firstName': callback_query.from_user.first_name}
-    response = requests.post(url, json=body)
-    if response.ok:
-        text = "Регистрация отменена.\nCпасибо что уведомили!"
-        await update_event_message(response)
-    elif response.status_code == 404:
-        text = "Cпасибо что уведомили!"
-    else:
-        text = "Что-то пошло не так!"
+    url = baseUrl + '/event'
+    event_response = requests.get(url)
+    text = "Что-то пошло не так!"
+    if event_response.ok:
+        url = baseUrl + '/unregister'
+        body = {'telegramId': callback_query.from_user.id, 'username': callback_query.from_user.username, 'firstName': callback_query.from_user.first_name}
+        response = requests.post(url, json=body)
+        if response.ok:
+            text = "Регистрация отменена.\nCпасибо что уведомили!"
+            await update_event_message(response, event_response)
+        elif response.status_code == 404:
+            text = "Cпасибо что уведомили!"
     await callback_query.answer(text=text, show_alert=True)
 
 
-async def update_event_message(response: Response):
+async def update_event_message(response: Response, event_response: Response):
     usernames = list(map(lambda m: generate_name(m), response.json()['members']))
     for message in response.json()["messages"]:
-        final_caption = caption + f"\n\n{response.json()['membersCount']}/{max} человек"
+        final_caption = event_response.json()["description"] + f"\n\n{response.json()['membersCount']} человек зарегистрировано"
         if message["chatId"] == "-1002499953530":
             final_caption = final_caption + "\n" + "\n".join(usernames)
         await bot.edit_message_caption(message_id=message["messageId"],
