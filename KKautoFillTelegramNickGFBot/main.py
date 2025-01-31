@@ -49,7 +49,8 @@ async def start(message: types.Message, command: CommandObject):
     kbrate.button(text='Посмотреть оценки', web_app=WebAppInfo(
         url=("https://bogdansavel.github.io/kk-bot-front/#/rates/" + command.args)))
     kbrate.adjust(1,1)
-    await bot.send_photo(chat_id=message.chat.id, photo=FSInputFile(path=response.json()["photoName"]), reply_markup=kbrate.as_markup())
+    await bot.send_photo(chat_id=message.chat.id, photo=URLInputFile(url=response.json()["photoName"]),
+                         reply_markup=kbrate.as_markup())
 
 
 @dp.message(Command("health"))
