@@ -157,6 +157,8 @@ async def register(callback_query: CallbackQuery):
         if response.ok:
             if response.json()["isAlreadyRegistered"] == True:
                 text = "Вы уже зарегестрированы на это мероприятие."
+            elif response.json()["limitIsExceeded"] == True:
+                text = "Извините, мест для регистрации больше нет."
             else:
                 text = f"Cпасибо за регистрацию!\n\n Если у вас изменятся планы, не забудьте вернуться сюда, и нажать кнопку \"Не приду\"."
                 await update_event_message(response, event_response)
