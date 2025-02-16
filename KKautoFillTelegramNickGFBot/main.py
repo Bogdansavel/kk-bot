@@ -115,7 +115,7 @@ async def stop_event(message: types.Message):
         for message in response.json()["messages"]:
             await bot.edit_message_caption(message_id=message["messageId"],
                                         chat_id=message["chatId"],
-                                        caption=caption)
+                                        caption=response.json()["description"])
 
 
 @dp.message(Command("startEvent"))
