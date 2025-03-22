@@ -49,7 +49,7 @@ async def start(message: types.Message, command: CommandObject):
     kbrate.button(text='Посмотреть оценки', web_app=WebAppInfo(
         url=("https://bogdansavel.github.io/kk-bot-front/#/rates/" + command.args)))
     kbrate.adjust(1,1)
-    await bot.send_photo(chat_id=message.chat.id, photo=URLInputFile(url=response.json()["photoName"]),
+    await bot.send_photo(chat_id=message.chat.id, photo=URLInputFile(url=response.json()["ratePhotoName"]),
                          reply_markup=kbrate.as_markup())
 
 
@@ -116,6 +116,20 @@ async def stop_event(message: types.Message):
             await bot.edit_message_caption(message_id=message["messageId"],
                                         chat_id=message["chatId"],
                                         caption=response.json()["description"])
+
+@dp.message(Command("updatePhoto"))
+async def stop_event(message: types.Message):
+    if message.from_user.username == "fanboyDan":
+        url = baseUrl + '/event'
+        response = requests.get(url)
+        for message in response.json()["messages"]:
+            await bot.edit_message_media(message_id=message["messageId"],
+                                        chat_id=message["chatId"],
+                                        media=InputMediaPhoto(
+                                            media=URLInputFile(
+                                                url=response.json()["posterUrl"]),
+                                                caption=response.json()["description"]),
+                                         reply_markup=kb2.as_markup())
 
 
 @dp.message(Command("startEvent"))
