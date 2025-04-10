@@ -3,7 +3,7 @@ from aiogram import Bot, Dispatcher, types, Router, F
 from aiogram.types import CallbackQuery, FSInputFile, InputMediaPhoto, URLInputFile
 from aiogram.types.web_app_info import WebAppInfo
 from aiogram.client.default import DefaultBotProperties
-from aiogram.filters import CommandStart, Command, CommandObject
+from aiogram.filters import Command, CommandObject
 from aiogram.enums import ParseMode
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters.callback_data import CallbackData
@@ -40,17 +40,74 @@ max = 15
 
 @dp.message(Command("start"))
 async def start(message: types.Message, command: CommandObject):
-    movieId = command.args
-    url = baseUrl + '/movie/' + movieId
-    response = requests.get(url)
-    kbrate = InlineKeyboardBuilder()
-    kbrate.button(text='Оценить', web_app=WebAppInfo(
-        url=("https://bogdansavel.github.io/kk-bot-front/#/rate/" + command.args)))
-    kbrate.button(text='Посмотреть оценки', web_app=WebAppInfo(
-        url=("https://bogdansavel.github.io/kk-bot-front/#/rates/" + command.args)))
-    kbrate.adjust(1,1)
-    await bot.send_photo(chat_id=message.chat.id, photo=URLInputFile(url=response.json()["ratePhotoName"]),
-                         reply_markup=kbrate.as_markup())
+    arg = command.args
+    if arg == "ready":
+        url = baseUrl + '/round/setReady'
+        body = {"telegramId": message.from_user.id, "isReady": True}
+        response = requests.post(url, json=body)
+        text = update_round_message(response)
+        await bot.edit_message_text(chat_id=response.json()['message']['chatId'],
+                              message_id=response.json()['message']['messageId'],
+                              text=text)
+        await message.answer("Отлично! Спасибо что уведомили.")
+    elif arg == "notReady":
+        url = baseUrl + '/round/setReady'
+        body = {"telegramId": message.from_user.id, "isReady": False}
+        response = requests.post(url, json=body)
+        text = update_round_message(response)
+        await bot.edit_message_text(chat_id=response.json()['message']['chatId'],
+                                    message_id=response.json()['message']['messageId'],
+                                    text=text)
+        await message.answer("Жаль. Спасибо что уведомили!")
+    else:
+        url = baseUrl + '/movie/' + arg
+        response = requests.get(url)
+        kbrate = InlineKeyboardBuilder()
+        kbrate.button(text='Оценить', web_app=WebAppInfo(
+            url=("https://bogdansavel.github.io/kk-bot-front/#/rate/" + command.args)))
+        kbrate.button(text='Посмотреть оценки', web_app=WebAppInfo(
+            url=("https://bogdansavel.github.io/kk-bot-front/#/rates/" + command.args)))
+        kbrate.adjust(1,1)
+        await bot.send_photo(chat_id=message.chat.id, photo=URLInputFile(url=response.json()["ratePhotoName"]),
+                             reply_markup=kbrate.as_markup())
+
+
+@dp.message(Command("areyouready"))
+async def start(message: types.Message, command: CommandObject):
+    if message.from_user.username == "fanboyDan":
+        url = baseUrl + '/round'
+        response = requests.get(url)
+        if response.ok:
+            text = update_round_message(response)
+            message = await bot.send_message(chat_id="-1002499953530", text=text, parse_mode="HTML")
+            url = baseUrl + '/telegram-message/round'
+            body = {'messageId': message.message_id, 'chatId': message.chat.id, 'roundId': response.json()["id"]}
+            requests.post(url, json=body)
+        else:
+            text = "Что-то пошло не так!"
+            await message.answer(text=text, show_alert=True)
+
+
+def update_round_message(response: Response) -> str:
+    user_movie_dict = {}
+    for movie in response.json()["movies"]:
+        if movie["member"]["username"] not in user_movie_dict:
+            user_movie_dict[movie["member"]["username"]] = "\"" + movie["name"] + "\""
+        else:
+            user_movie_dict[movie["member"]["username"]] = user_movie_dict[movie["member"]["username"]] + ", " + movie[
+                "name"]
+
+    text = "\n*бип-боп*\nПривет, чатлане. Богдан мне сказал уточнить у вас, можете ли вы принести свои фильмы в это воскресенье? Нажмити внизу на соответствующую ссылку если можете или не можете. Если вы предложили фильм, а я вас тут не отметил - напишите пожалуйтса здесь или моему создателю в личку. Спасибо!\n\n<a href='t.me/kk_krakow_bot?start=ready'>Смогу</a>\n<a href='t.me/kk_krakow_bot?start=notReady'>Не смогу</a>"
+
+    for member in user_movie_dict.keys():
+        char = "❔"
+        for movie in response.json()["movies"]:
+            if movie["member"]["username"] == member and movie["isReady"]:
+                char = "✅"
+            elif movie["member"]["username"] == member and movie["isReady"] is False:
+                char = "❌"
+        text = char + " @" + member + " " + user_movie_dict[member] + "\n" + text
+    return text
 
 
 @dp.message(Command("health"))
@@ -73,7 +130,7 @@ async def test(message: types.Message):
 @dp.message(Command("sendRateMessage"))
 async def test(message: types.Message):
     if message.from_user.username == "fanboyDan":
-        await bot.send_photo("-1002499953530", photo=FSInputFile(path='TaxiDriverRate.png'), message_thread_id=173, caption="<a href='t.me/kk_krakow_bot?start==bcfbb67f-a005-4c24-92c8-2eb3de65b293""'>Оценить</a>", parse_mode="HTML")
+        await bot.send_photo("-1002499953530", photo=FSInputFile(path='TaxiDriverRate.png'), message_thread_id=173, caption="<a href='t.me/kk_krakow_bot?start=bcfbb67f-a005-4c24-92c8-2eb3de65b293""'>Оценить</a>", parse_mode="HTML")
 
 
 @dp.message(Command("event"))
