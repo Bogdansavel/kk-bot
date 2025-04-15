@@ -91,11 +91,12 @@ async def start(message: types.Message, command: CommandObject):
 def update_round_message(response: Response) -> str:
     user_movie_dict = {}
     for movie in response.json()["movies"]:
+        movie_name = "\"" + movie["name"] + "\""
         if movie["member"]["username"] not in user_movie_dict:
-            user_movie_dict[movie["member"]["username"]] = "\"" + movie["name"] + "\""
+            user_movie_dict[movie["member"]["username"]] = movie_name
         else:
-            user_movie_dict[movie["member"]["username"]] = user_movie_dict[movie["member"]["username"]] + ", " + movie[
-                "name"]
+            user_movie_dict[movie["member"]["username"]] = (user_movie_dict[movie["member"]["username"]] + ", "
+                                                            + movie_name)
 
     text = "\n*бип-боп*\nПривет, чатлане. Богдан мне сказал уточнить у вас, можете ли вы принести свои фильмы в это воскресенье? Нажмити внизу на соответствующую ссылку если можете или не можете. Если вы предложили фильм, а я вас тут не отметил - напишите пожалуйтса здесь или моему создателю в личку. Спасибо!\n\n<a href='t.me/kk_krakow_bot?start=ready'>Смогу</a>\n<a href='t.me/kk_krakow_bot?start=notReady'>Не смогу</a>"
 
