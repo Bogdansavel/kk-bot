@@ -1,3 +1,5 @@
+import json
+
 import requests
 from aiogram import Bot, Dispatcher, types, Router, F
 from aiogram.types import CallbackQuery, FSInputFile, InputMediaPhoto, URLInputFile
@@ -11,6 +13,7 @@ from aiogram.filters.callback_data import CallbackData
 import asyncio
 import logging
 
+from aiogram.utils.media_group import MediaGroupBuilder
 from requests import Response
 
 dp = Dispatcher()
@@ -20,7 +23,7 @@ token = "7284814693:AAEQ2YLnQ2ukjFprZ5tE42lvTZNR7No3t1I"
 tokenTest = "7869224203:AAGzt9yufaPGqYEk5DQcyVbFJ5t6BSiZ5_A"
 bot = Bot(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
-#baseUrl = "http://localhost:8080"
+# baseUrl = "http://localhost:8080"
 
 
 class CallBackMethod(CallbackData, prefix="method-name"):
@@ -72,8 +75,55 @@ async def start(message: types.Message, command: CommandObject):
                              reply_markup=kbrate.as_markup())
 
 
+@dp.message(Command("poll"))
+async def start(message: types.Message):
+    poll_question = "Что смотрим в ближайшее воскресенье?"
+    options = []
+
+    if message.from_user.username == "fanboyDan":
+        url = baseUrl + '/movie/ready'
+        response = requests.get(url)
+        if response.ok:
+            media_group = MediaGroupBuilder()
+            for movie in response.json():
+                json_movie = json.loads(movie["kinopoiskData"])
+                name = json_movie["name"]
+                year = json_movie["year"]
+                hours = json_movie["movieLength"] // 60
+                minutes = json_movie["movieLength"] % 60
+                director = "неизвестно"
+                language_id = movie["language"]
+                language = ""
+                for person in json_movie["persons"]:
+                    profession = person["profession"]
+                    if profession == "режиссеры":
+                        director = person["name"]
+                        break
+
+                if language_id is 1:
+                    language = "русская озвучка"
+                if language_id is 2:
+                    language = "русские субтитры"
+                if language_id is 3:
+                    options.append(f"{name} ({year}, {director}, {hours}ч {minutes}м, русская озвучка)")
+                    options.append(f"{name} ({year}, {director}, {hours}ч {minutes}м, русские субтитры)")
+                else:
+                    options.append(f"{name} ({year}, {director}, {hours}ч {minutes}м, {language})")
+
+                media_group.add_photo(type='photo', media=URLInputFile(url=json_movie["poster"]["url"]))
+            await bot.send_media_group(media=media_group.build(), chat_id=message.chat.id)
+            await bot.send_poll(question=poll_question,
+                                options=options,
+                                is_anonymous=False,
+                                allows_multiple_answers=True,
+                                chat_id=message.chat.id)
+        else:
+            text = "Что-то пошло не так!"
+            await message.answer(text=text, show_alert=True)
+
+
 @dp.message(Command("areyouready"))
-async def start(message: types.Message, command: CommandObject):
+async def start(message: types.Message):
     if message.from_user.username == "fanboyDan":
         url = baseUrl + '/round'
         response = requests.get(url)
