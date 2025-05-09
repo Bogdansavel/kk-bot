@@ -23,6 +23,7 @@ token = "7284814693:AAEQ2YLnQ2ukjFprZ5tE42lvTZNR7No3t1I"
 tokenTest = "7869224203:AAGzt9yufaPGqYEk5DQcyVbFJ5t6BSiZ5_A"
 bot = Bot(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
+group_chat_id = "-1002499953530"
 # baseUrl = "http://localhost:8080"
 
 
@@ -111,12 +112,12 @@ async def start(message: types.Message):
                     options.append(f"{name} ({year}, {director}, {hours}ч {minutes}м, {language})")
 
                 media_group.add_photo(type='photo', media=URLInputFile(url=json_movie["poster"]["url"]))
-            await bot.send_media_group(media=media_group.build(), chat_id=message.chat.id)
+            await bot.send_media_group(media=media_group.build(), chat_id=group_chat_id)
             await bot.send_poll(question=poll_question,
                                 options=options,
                                 is_anonymous=False,
                                 allows_multiple_answers=True,
-                                chat_id=message.chat.id)
+                                chat_id=group_chat_id)
         else:
             text = "Что-то пошло не так!"
             await message.answer(text=text, show_alert=True)
