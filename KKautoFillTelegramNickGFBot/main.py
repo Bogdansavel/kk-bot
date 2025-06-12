@@ -31,6 +31,11 @@ class CallBackMethod(CallbackData, prefix="method-name"):
     string: str
 
 
+ikb = InlineKeyboardBuilder()
+ikb.button(text='Смогу', callback_data=CallBackMethod(string='ready').pack())
+ikb.button(text='Не смогу', callback_data=CallBackMethod(string='notReady').pack())
+ikb.adjust(2)
+
 kb = InlineKeyboardBuilder()
 kb.button(text='Кто идет?', web_app=WebAppInfo(url='https://bogdansavel.github.io/kk-bot-front/#/members'))
 
@@ -130,7 +135,7 @@ async def start(message: types.Message):
         response = requests.get(url)
         if response.ok:
             text = update_round_message(response)
-            message = await bot.send_message(chat_id="-1002499953530", text=text, parse_mode="HTML")
+            message = await bot.send_message(chat_id=message.chat.id, text=text, parse_mode="HTML",reply_markup=ikb.as_markup())
             url = baseUrl + '/telegram-message/round'
             body = {'messageId': message.message_id, 'chatId': message.chat.id, 'roundId': response.json()["id"]}
             requests.post(url, json=body)
@@ -149,7 +154,7 @@ def update_round_message(response: Response) -> str:
             user_movie_dict[movie["member"]["username"]] = (user_movie_dict[movie["member"]["username"]] + ", "
                                                             + movie_name)
 
-    text = "\n*бип-боп*\nПривет, чатлане. Богдан мне сказал уточнить у вас, можете ли вы принести свои фильмы в это воскресенье? Нажмити внизу на соответствующую ссылку если можете или не можете. Если вы предложили фильм, а я вас тут не отметил - напишите пожалуйтса здесь или моему создателю в личку. Спасибо!\n\n<a href='t.me/kk_krakow_bot?start=ready'>Смогу</a>\n<a href='t.me/kk_krakow_bot?start=notReady'>Не смогу</a>"
+    text = "\n*бип-боп*\nПривет, чатлане. Богдан мне сказал уточнить у вас, можете ли вы принести свои фильмы в это воскресенье? Нажмити внизу на соответствующую ссылку если можете или не можете. Если вы предложили фильм, а я вас тут не отметил - напишите пожалуйтса здесь или моему создателю в личку. Спасибо!"
 
     for member in user_movie_dict.keys():
         char = "❔"
@@ -286,6 +291,34 @@ async def register(callback_query: CallbackQuery):
                 text = f"Cпасибо за регистрацию!\n\n Если у вас изменятся планы, не забудьте вернуться сюда, и нажать кнопку \"Не приду\"."
                 await update_event_message(response, event_response)
     await callback_query.answer(text=text, show_alert=True)
+
+
+@router.callback_query(CallBackMethod.filter(F.string == 'ready'))
+async def ready(callback_query: CallbackQuery):
+    url = baseUrl + '/round/setReady'
+    body = {"telegramId": callback_query.from_user.id, "isReady": True}
+    response = requests.post(url, json=body)
+    if response.ok:
+        text = update_round_message(response)
+        await bot.edit_message_text(chat_id=response.json()['message']['chatId'],
+                                message_id=response.json()['message']['messageId'],
+                                text=text, reply_markup=ikb.as_markup())
+    else:
+        await callback_query.answer(text="Что-то пошло не так!", show_alert=True)
+
+
+@router.callback_query(CallBackMethod.filter(F.string == 'notReady'))
+async def notReady(callback_query: CallbackQuery):
+    url = baseUrl + '/round/setReady'
+    body = {"telegramId": callback_query.from_user.id, "isReady": False}
+    response = requests.post(url, json=body)
+    if response.ok:
+        text = update_round_message(response)
+        await bot.edit_message_text(chat_id=response.json()['message']['chatId'],
+                                message_id=response.json()['message']['messageId'],
+                                text=text, reply_markup=ikb.as_markup())
+    else:
+        await callback_query.answer(text="Что-то пошло не так!", show_alert=True)
 
 
 @router.callback_query(CallBackMethod.filter(F.string == 'unregister'))
