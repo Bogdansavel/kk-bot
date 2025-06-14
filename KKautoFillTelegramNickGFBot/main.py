@@ -135,7 +135,7 @@ async def start(message: types.Message):
         response = requests.get(url)
         if response.ok:
             text = update_round_message(response)
-            message = await bot.send_message(chat_id=message.chat.id, text=text, parse_mode="HTML",reply_markup=ikb.as_markup())
+            message = await bot.send_message(chat_id=group_chat_id, text=text, parse_mode="HTML",reply_markup=ikb.as_markup())
             url = baseUrl + '/telegram-message/round'
             body = {'messageId': message.message_id, 'chatId': message.chat.id, 'roundId': response.json()["id"]}
             requests.post(url, json=body)
