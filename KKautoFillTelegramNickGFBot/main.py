@@ -98,7 +98,7 @@ async def rate(message: types.Message):
     kb_rate.button(text='Посмотреть оценки', web_app=WebAppInfo(
         url=("https://bogdansavel.github.io/kk-bot-front/#/rates/" + movie_id)))
     kb_rate.adjust(1, 1)
-    await bot.send_photo(chat_id=message.chat.id, message_thread_id=rate_chat_id,
+    await bot.send_photo(chat_id=group_chat_id, message_thread_id=rate_chat_id,
                          photo=URLInputFile(url=movie_json["ratePhotoName"]),
                          reply_markup=kb_rate.as_markup())
 
