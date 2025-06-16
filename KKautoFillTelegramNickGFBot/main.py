@@ -81,6 +81,26 @@ async def start(message: types.Message, command: CommandObject):
                              reply_markup=kbrate.as_markup())
 
 
+@dp.message(Command("rate"))
+async def rate(message: types.Message):
+    url = baseUrl + '/event'
+    response = requests.get(url)
+    movie_id = response.json()["movieId"]
+
+    url = baseUrl + '/movie/' + movie_id
+    response = requests.get(url)
+    movie_json = response.json()
+
+    kb_rate = InlineKeyboardBuilder()
+    kb_rate.button(text='Оценить', web_app=WebAppInfo(
+        url=("https://bogdansavel.github.io/kk-bot-front/#/rate/" + movie_id)))
+    kb_rate.button(text='Посмотреть оценки', web_app=WebAppInfo(
+        url=("https://bogdansavel.github.io/kk-bot-front/#/rates/" + movie_id)))
+    kb_rate.adjust(1, 1)
+    await bot.send_photo(chat_id=message.chat.id, photo=URLInputFile(url=movie_json["ratePhotoName"]),
+                         reply_markup=kb_rate.as_markup())
+
+
 @dp.message(Command("poll"))
 async def start(message: types.Message):
     poll_question = "Что смотрим в ближайшее воскресенье?"
