@@ -21,11 +21,11 @@ router = Router(name=__name__)
 dp.include_router(router)
 token = "7284814693:AAEQ2YLnQ2ukjFprZ5tE42lvTZNR7No3t1I"
 tokenTest = "7869224203:AAGzt9yufaPGqYEk5DQcyVbFJ5t6BSiZ5_A"
-bot = Bot(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
+bot = Bot(tokenTest, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+# baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
 group_chat_id = "-1002499953530"
 rate_chat_id = 173
-# baseUrl = "http://localhost:8080"
+baseUrl = "http://localhost:8080"
 
 
 class CallBackMethod(CallbackData, prefix="method-name"):
@@ -82,25 +82,18 @@ async def start(message: types.Message, command: CommandObject):
                              reply_markup=kbrate.as_markup())
 
 
-@dp.message(Command("rate"))
-async def rate(message: types.Message):
-    url = baseUrl + '/event'
-    response = requests.get(url)
-    movie_id = response.json()["movieId"]
+#@dp.message(Command("rate"))
+#async def rate(message: types.Message):
+#    url = baseUrl + '/event'
+#    response = requests.get(url)
+#    movie_id = response.json()["movieId"]
 
-    url = baseUrl + '/movie/' + movie_id
-    response = requests.get(url)
-    movie_json = response.json()
-
-    kb_rate = InlineKeyboardBuilder()
-    kb_rate.button(text='Оценить', web_app=WebAppInfo(
-        url=("https://bogdansavel.github.io/kk-bot-front/#/rate/" + movie_id)))
-    kb_rate.button(text='Посмотреть оценки', web_app=WebAppInfo(
-        url=("https://bogdansavel.github.io/kk-bot-front/#/rates/" + movie_id)))
-    kb_rate.adjust(1, 1)
-    await bot.send_photo(chat_id=group_chat_id, message_thread_id=rate_chat_id,
-                         photo=URLInputFile(url=movie_json["ratePhotoName"]),
-                         reply_markup=kb_rate.as_markup())
+#    url = baseUrl + '/movie/' + movie_id
+#    response = requests.get(url)
+#    movie_json = response.json()
+#    message = "https://t.me/kk_krakow_bot/appname?startapp=command&mode=compact"
+#    await bot.send_photo(chat_id=group_chat_id, message_thread_id=rate_chat_id,
+#                         photo=URLInputFile(url=movie_json["ratePhotoName"]), message=)
 
 
 @dp.message(Command("poll"))
@@ -247,11 +240,19 @@ async def latest(message: types.Message):
 async def stop_event(message: types.Message):
     if message.from_user.username == "fanboyDan":
         url = baseUrl + '/event'
-        response = requests.get(url)
-        for message in response.json()["messages"]:
+        response1 = requests.get(url)
+
+        url = baseUrl + '/event/stop/' + response1.json()["id"]
+        response2 = requests.put(url)
+
+        if not response1.ok or not response2.ok:
+            text = "Что-то пошло не так!"
+            await message.answer(text=text, show_alert=True)
+
+        for message in response1.json()["messages"]:
             await bot.edit_message_caption(message_id=message["messageId"],
                                         chat_id=message["chatId"],
-                                        caption=response.json()["description"])
+                                        caption=response1.json()["description"])
 
 @dp.message(Command("updatePhoto"))
 async def stop_event(message: types.Message):
