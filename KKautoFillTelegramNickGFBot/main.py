@@ -21,11 +21,11 @@ router = Router(name=__name__)
 dp.include_router(router)
 token = "7284814693:AAEQ2YLnQ2ukjFprZ5tE42lvTZNR7No3t1I"
 tokenTest = "7869224203:AAGzt9yufaPGqYEk5DQcyVbFJ5t6BSiZ5_A"
-bot = Bot(tokenTest, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-# baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
+bot = Bot(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
 group_chat_id = "-1002499953530"
 rate_chat_id = 173
-baseUrl = "http://localhost:8080"
+# baseUrl = "http://localhost:8080"
 
 
 class CallBackMethod(CallbackData, prefix="method-name"):
