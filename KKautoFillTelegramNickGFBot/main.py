@@ -125,6 +125,8 @@ async def start(message: types.Message):
                     language = "русская озвучка"
                 if language_id is 2:
                     language = "русские субтитры"
+                if language_id is 4:
+                    language = "беларуская агучка"
                 if language_id is 3:
                     options.append(f"{name} ({year}, {director}, {hours}ч {minutes}м, русская озвучка)")
                     options.append(f"{name} ({year}, {director}, {hours}ч {minutes}м, русские субтитры)")
