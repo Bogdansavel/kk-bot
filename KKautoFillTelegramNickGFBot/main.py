@@ -9,6 +9,8 @@ from aiogram.filters import Command, CommandObject
 from aiogram.enums import ParseMode
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters.callback_data import CallbackData
+from dotenv import load_dotenv
+import os
 
 import asyncio
 import logging
@@ -16,16 +18,15 @@ import logging
 from aiogram.utils.media_group import MediaGroupBuilder
 from requests import Response
 
+load_dotenv()
 dp = Dispatcher()
 router = Router(name=__name__)
 dp.include_router(router)
-token = "7284814693:AAEQ2YLnQ2ukjFprZ5tE42lvTZNR7No3t1I"
-tokenTest = "7869224203:AAGzt9yufaPGqYEk5DQcyVbFJ5t6BSiZ5_A"
+token = os.environ['BOT_TOKEN']
 bot = Bot(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-baseUrl = "https://kk-backend-619198175847.europe-central2.run.app"
+baseUrl = os.environ['BACKEND_URL']
 group_chat_id = "-1002499953530"
 rate_chat_id = 173
-# baseUrl = "http://localhost:8080"
 
 
 class CallBackMethod(CallbackData, prefix="method-name"):
