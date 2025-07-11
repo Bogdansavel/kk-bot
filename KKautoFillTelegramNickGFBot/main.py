@@ -1,4 +1,5 @@
 import json
+from pyexpat.errors import messages
 
 import requests
 from aiogram import Bot, Dispatcher, types, Router, F
@@ -83,18 +84,18 @@ async def start(message: types.Message, command: CommandObject):
                              reply_markup=kbrate.as_markup())
 
 
-#@dp.message(Command("rate"))
-#async def rate(message: types.Message):
-#    url = baseUrl + '/event'
-#    response = requests.get(url)
-#    movie_id = response.json()["movieId"]
+@dp.message(Command("rate"))
+async def rate(message: types.Message):
+    url = baseUrl + '/event'
+    response = requests.get(url)
+    movie_id = response.json()["movieId"]
 
-#    url = baseUrl + '/movie/' + movie_id
-#    response = requests.get(url)
-#    movie_json = response.json()
-#    message = "https://t.me/kk_krakow_bot/appname?startapp=command&mode=compact"
-#    await bot.send_photo(chat_id=group_chat_id, message_thread_id=rate_chat_id,
-#                         photo=URLInputFile(url=movie_json["ratePhotoName"]), message=)
+    url = baseUrl + '/movie/' + movie_id
+    response = requests.get(url)
+    movie_json = response.json()
+    await bot.send_photo(chat_id=group_chat_id, message_thread_id=rate_chat_id, parse_mode="HTML",
+                         photo=URLInputFile(url=movie_json["ratePhotoName"]),
+                         caption="<a href='http://t.me/kk_krakow_bot?start={}'>Оценить фильм</a>".format(movie_json["id"]))
 
 
 @dp.message(Command("poll"))
@@ -153,7 +154,7 @@ async def start(message: types.Message):
         response = requests.get(url)
         if response.ok:
             text = update_round_message(response)
-            message = await bot.send_message(chat_id=group_chat_id, text=text, parse_mode="HTML",reply_markup=ikb.as_markup())
+            message = await bot.send_message(chat_id=message.chat.id, text=text, parse_mode="HTML",reply_markup=ikb.as_markup())
             url = baseUrl + '/telegram-message/round'
             body = {'messageId': message.message_id, 'chatId': message.chat.id, 'roundId': response.json()["id"]}
             requests.post(url, json=body)
@@ -172,7 +173,7 @@ def update_round_message(response: Response) -> str:
             user_movie_dict[movie["member"]["username"]] = (user_movie_dict[movie["member"]["username"]] + ", "
                                                             + movie_name)
 
-    text = "\n*бип-боп*\nПривет, чатлане. Богдан мне сказал уточнить у вас, можете ли вы принести свои фильмы в это воскресенье? Нажмити внизу на соответствующую ссылку если можете или не можете. Если вы предложили фильм, а я вас тут не отметил - напишите пожалуйтса здесь или моему создателю в личку. Спасибо!"
+    text = "\n*бип-боп* я неодушевленный кусок кода\n\nБогдан мне сказал уточнить у вас, можете ли вы принести свои фильмы в это воскресенье? Нажмити внизу на соответствующую кнопку если можете или не можете.\n\nЕсли вы предложили фильм, а я вас тут не отметил - напишите пожалуйтса здесь или моему создателю в личку. Спасибо!?!"
 
     for member in user_movie_dict.keys():
         char = "❔"
@@ -188,18 +189,6 @@ def update_round_message(response: Response) -> str:
 @dp.message(Command("health"))
 async def start(message: types.Message):
     await message.answer(text="Alive!")
-
-
-@dp.message(Command("test"))
-async def test(message: types.Message):
-    if message.from_user.username == "fanboyDan":
-        message = await bot.send_photo(message.chat.id, photo=FSInputFile(path='KKposter.png'),
-                                       caption=caption + "\n\n0/16 человек",
-                                       parse_mode="HTML",
-                                       reply_markup=kb2.as_markup())
-        url = baseUrl + '/telegram-message'
-        body = {'messageId': message.message_id, 'chatId': message.chat.id}
-        requests.post(url, json=body)
 
 
 @dp.message(Command("sendRateMessage"))
@@ -329,6 +318,7 @@ async def ready(callback_query: CallbackQuery):
         await bot.edit_message_text(chat_id=response.json()['message']['chatId'],
                                 message_id=response.json()['message']['messageId'],
                                 text=text, reply_markup=ikb.as_markup())
+        await callback_query.answer(text="Отлично! Спасибо что уведомили.", show_alert=True)
     else:
         await callback_query.answer(text="Что-то пошло не так!", show_alert=True)
 
@@ -343,6 +333,7 @@ async def notReady(callback_query: CallbackQuery):
         await bot.edit_message_text(chat_id=response.json()['message']['chatId'],
                                 message_id=response.json()['message']['messageId'],
                                 text=text, reply_markup=ikb.as_markup())
+        await callback_query.answer(text="Жаль! Ждем вас в другой раз.", show_alert=True)
     else:
         await callback_query.answer(text="Что-то пошло не так!", show_alert=True)
 
@@ -376,10 +367,22 @@ async def update_event_message(response: Response, event_response: Response):
                                        reply_markup=kb2.as_markup())
 
 
+@dp.message(Command("test"))
+async def test(message: types.Message):
+    url = baseUrl + "/event"
+    response = requests.get(url)
+    if response.ok:
+        usernames = list(map(lambda m: generate_name(m), response.json()['members']))
+
+
 def generate_name(m):
-    name = m["username"] if m["firstName"] is None else m["firstName"]
+    name = m["username"] if is_empty_string(m["firstName"]) else m["firstName"]
     name = name if m["username"] is None else "<a href=\'https://t.me/" + m["username"] + "\'>" + name + "</a>"
     return name + " впервые!" if m["freshBlood"] is True else name
+
+
+def is_empty_string(s):
+    return s is None or len(s) == 0
 
 
 async def main() -> None:
