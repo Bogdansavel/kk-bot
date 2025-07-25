@@ -1,4 +1,5 @@
 import json
+from http.client import responses
 from pyexpat.errors import messages
 
 import requests
@@ -284,6 +285,18 @@ async def update_event_info(message: types.Message):
                                                                    caption=caption),
                                              message_id=m["messageId"], chat_id=m["chatId"])
                 await message.answer("Update has been done successfully")
+        else:
+            await message.answer("Somthing went wrong")
+
+
+@dp.message(Command("stopPoll"))
+async def stop_poll(message: types.Message):
+    if message.from_user.username == "fanboyDan":
+        url = baseUrl + '/round'
+        response = requests.get(url)
+        if response.ok:
+            json_response = response.json()
+            await bot.stop_poll(chat_id=json_response["pollMessage"]["chatId"], message_id=json_response["pollMessage"]["messageId"])
         else:
             await message.answer("Somthing went wrong")
 
