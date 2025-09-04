@@ -1,6 +1,4 @@
 import json
-from http.client import responses
-from pyexpat.errors import messages
 
 import requests
 from aiogram import Bot, Dispatcher, types, Router, F
@@ -174,7 +172,7 @@ def update_round_message(response: Response) -> str:
             user_movie_dict[movie["member"]["username"]] = (user_movie_dict[movie["member"]["username"]] + ", "
                                                             + movie_name)
 
-    text = "\n*бип-боп* я неодушевленный кусок кода\n\nБогдан мне сказал уточнить у вас, можете ли вы принести свои фильмы в это воскресенье? Нажмити внизу на соответствующую кнопку если можете или не можете.\n\nЕсли вы предложили фильм, а я вас тут не отметил - напишите пожалуйтса здесь или моему создателю в личку. Спасибо!?!"
+    text = "\n*бип-боп* я неодушевленный кусок кода\n\nБогдан мне сказал уточнить у вас, можете ли вы принести свои фильмы в это воскресенье? Нажмити внизу на соответствующую кнопку если можете или не можете.\n\nЕсли вы предложили фильм, а я вас тут не отметил - напишите пожалуйтса здесь или моему создателю в личку. Спасибо!"
 
     for member in user_movie_dict.keys():
         char = "❔"
@@ -316,7 +314,7 @@ async def register(callback_query: CallbackQuery):
             elif response.json()["limitIsExceeded"] == True:
                 text = "Извините, мест для регистрации больше нет."
             else:
-                text = f"Cпасибо за регистрацию!\n\n Если у вас изменятся планы, не забудьте вернуться сюда, и нажать кнопку \"Не приду\"."
+                text = f"Cпасибо за регистрацию!\n\nЕсли у вас изменятся планы, не забудьте вернуться сюда, и нажать кнопку \"Не приду\"."
                 await update_event_message(response, event_response)
     await callback_query.answer(text=text, show_alert=True)
 
