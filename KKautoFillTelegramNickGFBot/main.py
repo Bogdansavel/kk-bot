@@ -227,10 +227,32 @@ async def latest(message: types.Message):
     await bot.send_photo(message.chat.id, photo=FSInputFile(path='KKposter.png'), reply_markup=kb.as_markup())
 
 
+@dp.message(Command("photo"))
+async def photo(message: types.Message):
+    url = baseUrl + '/member/all/id'
+    response = requests.get(url)
+    # photo = message.from_user.get_profile_photos()
+    if response.ok:
+        photos = []
+        ids = response.json()
+        photos = await bot.get_user_profile_photos(user_id=message.from_user.id, limit=1)
+        if photos.photos:
+            highest_res_photo = photos.photos[0][-1]
+            file_info = await bot.get_file(highest_res_photo.file_id)
+            file_path = file_info.file_path
+
+            test = 'test'
+    else:
+        text = "Что-то пошло не так!"
+        await message.answer(text=text, show_alert=True)
+
+
 @dp.message(Command("stop"))
-async def stop_event(message: types.Message):
+async def stop_event(message: types.Message, command: CommandObject):
     if message.from_user.username == "fanboyDan":
         url = baseUrl + '/event'
+        if command.args is not None:
+            url += '/date/' + command.args
         response1 = requests.get(url)
 
         url = baseUrl + '/event/stop/' + response1.json()["id"]
@@ -306,6 +328,7 @@ async def register(callback_query: CallbackQuery):
     text = "Что-то пошло не так!"
     if event_response.ok:
         url = baseUrl + '/register'
+        # photo = callback_query.from_user.get_profile_photos()
         body = {'telegramId': callback_query.from_user.id, 'username': callback_query.from_user.username, 'firstName': callback_query.from_user.first_name}
         response = requests.post(url, json=body)
         if response.ok:
