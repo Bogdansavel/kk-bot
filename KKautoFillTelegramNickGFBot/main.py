@@ -26,25 +26,23 @@ token = os.environ['BOT_TOKEN']
 bot = Bot(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 baseUrl = os.environ['BACKEND_URL']
 group_chat_id = "-1002499953530"
+channel_chat_id = "@kkkrakow"
 rate_chat_id = 173
 
 
 class CallBackMethod(CallbackData, prefix="method-name"):
     string: str
+    event_id: str
 
 
 ikb = InlineKeyboardBuilder()
-ikb.button(text='Смогу', callback_data=CallBackMethod(string='ready').pack())
-ikb.button(text='Не смогу', callback_data=CallBackMethod(string='notReady').pack())
+ikb.button(text='Смогу', callback_data=CallBackMethod(string='ready', event_id="0").pack())
+ikb.button(text='Не смогу', callback_data=CallBackMethod(string='notReady', event_id="0").pack())
 ikb.adjust(2)
 
 kb = InlineKeyboardBuilder()
 kb.button(text='Кто идет?', web_app=WebAppInfo(url='https://bogdansavel.github.io/kk-bot-front/#/members'))
 
-kb2 = InlineKeyboardBuilder()
-kb2.button(text='Приду', callback_data=CallBackMethod(string='register').pack())
-kb2.button(text='Не приду', callback_data=CallBackMethod(string='unregister').pack())
-kb2.adjust(2)
 caption = "<b>Киноклуб в Кракове!</b>\n\nСмотрим, обсуждаем, рассуждаем и делимся своими впечатлениями о фильме \"Догвиль\"! В кругу людей, любящих кино.\n\nВоскресенье.\n19 января. 17:00.\nКраков, Łobzowska 15/15.\n\nЯзык: русская озвучка\nСтоимость: 10зл.\nОграничение количества учаcтников нестрогое."
 max = 15
 
@@ -197,25 +195,32 @@ async def test(message: types.Message):
 
 
 @dp.message(Command("event"))
-async def event(message: types.Message):
+async def event(message: types.Message, command: CommandObject):
     if message.from_user.username == "fanboyDan":
         url = baseUrl + '/event'
+        if command.args is not None:
+            url += '/date/' + command.args
         response = requests.get(url)
+        event_id = response.json()["id"]
+        kb3 = InlineKeyboardBuilder()
+        kb3.button(text='Приду', callback_data=CallBackMethod(string='register', event_id=event_id).pack())
+        kb3.button(text='Не приду', callback_data=CallBackMethod(string='unregister', event_id=event_id).pack())
+        kb3.adjust(2)
         if response.ok:
-            message = await bot.send_photo("@kkkrakow", photo=URLInputFile(url=response.json()["posterUrl"]),
+            message = await bot.send_photo(channel_chat_id, photo=URLInputFile(url=response.json()["posterUrl"]),
                                            caption=response.json()["description"],
                                            parse_mode="HTML",
-                                           reply_markup=kb2.as_markup())
+                                           reply_markup=kb3.as_markup())
             url = baseUrl + '/telegram-message'
-            body = {'messageId': message.message_id, 'chatId': "@kkkrakow"}
+            body = {'messageId': message.message_id, 'chatId': message.chat.id, 'eventId':event_id}
             requests.post(url, json=body)
 
             message = await bot.send_photo("-1002499953530", photo=URLInputFile(url=response.json()["posterUrl"]),
                                            caption=response.json()["description"],
                                            parse_mode="HTML",
-                                           reply_markup=kb2.as_markup())
+                                           reply_markup=kb3.as_markup())
             url = baseUrl + '/telegram-message'
-            body = {'messageId': message.message_id, 'chatId': "-1002499953530"}
+            body = {'messageId': message.message_id, 'chatId': "-1002499953530", 'eventId':event_id}
             requests.post(url, json=body)
         else:
             text = "Что-то пошло не так!"
@@ -267,31 +272,19 @@ async def stop_event(message: types.Message, command: CommandObject):
                                         chat_id=message["chatId"],
                                         caption=response1.json()["description"])
 
-@dp.message(Command("updatePhoto"))
-async def stop_event(message: types.Message):
-    if message.from_user.username == "fanboyDan":
-        url = baseUrl + '/event'
-        response = requests.get(url)
-        for message in response.json()["messages"]:
-            await bot.edit_message_media(message_id=message["messageId"],
-                                        chat_id=message["chatId"],
-                                        media=InputMediaPhoto(
-                                            media=URLInputFile(
-                                                url=response.json()["posterUrl"]),
-                                                caption=response.json()["description"]),
-                                         reply_markup=kb2.as_markup())
-
-
-@dp.message(Command("startEvent"))
-async def start_event(message: types.Message):
-    if message.from_user.username == "fanboyDan":
-        url = baseUrl + '/event'
-        response = requests.get(url)
-        for message in response.json()["messages"]:
-            await bot.edit_message_caption(message_id=message["messageId"],
-                                               chat_id=message["chatId"],
-                                               caption=caption,
-                                               reply_markup=kb2.as_markup())
+#@dp.message(Command("updatePhoto"))
+#async def stop_event(message: types.Message):
+#    if message.from_user.username == "fanboyDan":
+#        url = baseUrl + '/event'
+#        response = requests.get(url)
+#        for message in response.json()["messages"]:
+#            await bot.edit_message_media(message_id=message["messageId"],
+#                                        chat_id=message["chatId"],
+#                                        media=InputMediaPhoto(
+#                                            media=URLInputFile(
+#                                                url=response.json()["posterUrl"]),
+#                                                caption=response.json()["description"]),
+#                                         reply_markup=kb2.as_markup())
 
 
 @dp.message(Command("update"))
@@ -319,27 +312,6 @@ async def stop_poll(message: types.Message):
             await bot.stop_poll(chat_id=json_response["pollMessage"]["chatId"], message_id=json_response["pollMessage"]["messageId"])
         else:
             await message.answer("Somthing went wrong")
-
-
-@router.callback_query(CallBackMethod.filter(F.string == 'register'))
-async def register(callback_query: CallbackQuery):
-    url = baseUrl + '/event'
-    event_response = requests.get(url)
-    text = "Что-то пошло не так!"
-    if event_response.ok:
-        url = baseUrl + '/register'
-        # photo = callback_query.from_user.get_profile_photos()
-        body = {'telegramId': callback_query.from_user.id, 'username': callback_query.from_user.username, 'firstName': callback_query.from_user.first_name}
-        response = requests.post(url, json=body)
-        if response.ok:
-            if response.json()["isAlreadyRegistered"] == True:
-                text = "Вы уже зарегестрированы на это мероприятие."
-            elif response.json()["limitIsExceeded"] == True:
-                text = "Извините, мест для регистрации больше нет."
-            else:
-                text = f"Cпасибо за регистрацию!\n\nЕсли у вас изменятся планы, не забудьте вернуться сюда, и нажать кнопку \"Не приду\"."
-                await update_event_message(response, event_response)
-    await callback_query.answer(text=text, show_alert=True)
 
 
 @router.callback_query(CallBackMethod.filter(F.string == 'ready'))
@@ -372,24 +344,53 @@ async def notReady(callback_query: CallbackQuery):
         await callback_query.answer(text="Что-то пошло не так!", show_alert=True)
 
 
+@router.callback_query(CallBackMethod.filter(F.string == 'register'))
+async def register(callback_query: CallbackQuery, callback_data: CallBackMethod):
+    url = baseUrl + '/event/' + callback_data.event_id
+    event_response = requests.get(url)
+    text = "Что-то пошло не так!"
+    if event_response.ok:
+        url = baseUrl + '/register'
+        # photo = callback_query.from_user.get_profile_photos()
+        body = {'telegramId': callback_query.from_user.id, 'username': callback_query.from_user.username, 'firstName': callback_query.from_user.first_name, 'eventId': callback_data.event_id}
+        response = requests.post(url, json=body)
+        kb3 = InlineKeyboardBuilder()
+        kb3.button(text='Приду', callback_data=CallBackMethod(string='register', event_id=callback_data.event_id).pack())
+        kb3.button(text='Не приду', callback_data=CallBackMethod(string='unregister', event_id=callback_data.event_id).pack())
+        kb3.adjust(2)
+        if response.ok:
+            if response.json()["isAlreadyRegistered"] == True:
+                text = "Вы уже зарегестрированы на это мероприятие."
+            elif response.json()["limitIsExceeded"] == True:
+                text = "Извините, мест для регистрации больше нет."
+            else:
+                text = f"Cпасибо за регистрацию!\n\nЕсли у вас изменятся планы, не забудьте вернуться сюда, и нажать кнопку \"Не приду\"."
+                await update_event_message(response, event_response, kb3)
+    await callback_query.answer(text=text, show_alert=True)
+
+
 @router.callback_query(CallBackMethod.filter(F.string == 'unregister'))
-async def unregister(callback_query: CallbackQuery):
-    url = baseUrl + '/event'
+async def unregister(callback_query: CallbackQuery, callback_data: CallBackMethod):
+    url = baseUrl + '/event/' + callback_data.event_id
     event_response = requests.get(url)
     text = "Что-то пошло не так!"
     if event_response.ok:
         url = baseUrl + '/unregister'
-        body = {'telegramId': callback_query.from_user.id, 'username': callback_query.from_user.username, 'firstName': callback_query.from_user.first_name}
+        body = {'telegramId': callback_query.from_user.id, 'username': callback_query.from_user.username, 'firstName': callback_query.from_user.first_name, "eventId": callback_data.event_id}
         response = requests.post(url, json=body)
+        kb3 = InlineKeyboardBuilder()
+        kb3.button(text='Приду', callback_data=CallBackMethod(string='register', event_id=callback_data.event_id).pack())
+        kb3.button(text='Не приду', callback_data=CallBackMethod(string='unregister', event_id=callback_data.event_id).pack())
+        kb3.adjust(2)
         if response.ok:
             text = "Регистрация отменена.\nCпасибо что уведомили!"
-            await update_event_message(response, event_response)
+            await update_event_message(response, event_response, kb3)
         elif response.status_code == 404:
             text = "Cпасибо что уведомили!"
     await callback_query.answer(text=text, show_alert=True)
 
 
-async def update_event_message(response: Response, event_response: Response):
+async def update_event_message(response: Response, event_response: Response, kb1: InlineKeyboardBuilder):
     usernames = list(map(lambda m: generate_name(m), response.json()['members']))
     for message in response.json()["messages"]:
         final_caption = event_response.json()["description"] + f"\n\n{response.json()['membersCount']}/16 зарегистрировано"
@@ -398,7 +399,7 @@ async def update_event_message(response: Response, event_response: Response):
         await bot.edit_message_caption(message_id=message["messageId"],
                                        chat_id=message["chatId"],
                                        caption=final_caption,
-                                       reply_markup=kb2.as_markup())
+                                       reply_markup=kb1.as_markup())
 
 
 @dp.message(Command("test"))
