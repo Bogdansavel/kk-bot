@@ -360,7 +360,7 @@ async def register(callback_query: CallbackQuery, callback_data: CallBackMethod)
         kb3.adjust(2)
         if response.ok:
             if response.json()["isAlreadyRegistered"] == True:
-                text = "Вы уже зарегестрированы на это мероприятие."
+                text = "Вы уже зарегестрированы на это мероприятие или такое же в другой день. Чтобы зарегестрироваться сначала отмените предыдущую регистрацию."
             elif response.json()["limitIsExceeded"] == True:
                 text = "Извините, мест для регистрации больше нет."
             else:
