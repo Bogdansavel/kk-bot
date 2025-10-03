@@ -272,19 +272,26 @@ async def stop_event(message: types.Message, command: CommandObject):
                                         chat_id=message["chatId"],
                                         caption=response1.json()["description"])
 
-#@dp.message(Command("updatePhoto"))
-#async def stop_event(message: types.Message):
-#    if message.from_user.username == "fanboyDan":
-#        url = baseUrl + '/event'
-#        response = requests.get(url)
-#        for message in response.json()["messages"]:
-#            await bot.edit_message_media(message_id=message["messageId"],
-#                                        chat_id=message["chatId"],
-#                                        media=InputMediaPhoto(
-#                                            media=URLInputFile(
-#                                                url=response.json()["posterUrl"]),
-#                                                caption=response.json()["description"]),
-#                                         reply_markup=kb2.as_markup())
+@dp.message(Command("updatePhoto"))
+async def stop_event(message: types.Message, command: CommandObject):
+    if message.from_user.username == "fanboyDan":
+        url = baseUrl + '/event'
+        if command.args is not None:
+            url += '/date/' + command.args
+        response = requests.get(url)
+        event_id = response.json()["id"]
+        kb3 = InlineKeyboardBuilder()
+        kb3.button(text='Приду', callback_data=CallBackMethod(string='register', event_id=event_id).pack())
+        kb3.button(text='Не приду', callback_data=CallBackMethod(string='unregister', event_id=event_id).pack())
+        kb3.adjust(2)
+        for message in response.json()["messages"]:
+            await bot.edit_message_media(message_id=message["messageId"],
+                                        chat_id=message["chatId"],
+                                        media=InputMediaPhoto(
+                                            media=URLInputFile(
+                                                url=response.json()["posterUrl"]),
+                                                caption=response.json()["description"]),
+                                         reply_markup=kb3.as_markup())
 
 
 @dp.message(Command("update"))
