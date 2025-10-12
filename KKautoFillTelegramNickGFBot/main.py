@@ -400,7 +400,7 @@ async def unregister(callback_query: CallbackQuery, callback_data: CallBackMetho
 async def update_event_message(response: Response, event_response: Response, kb1: InlineKeyboardBuilder):
     usernames = list(map(lambda m: generate_name(m), response.json()['members']))
     for message in response.json()["messages"]:
-        final_caption = event_response.json()["description"] + f"\n\n{response.json()['membersCount']}/17 зарегистрировано"
+        final_caption = event_response.json()["description"] + f"\n\n{response.json()['membersCount']}/20 зарегистрировано"
         if message["chatId"] == "-1002499953530":
             final_caption = final_caption + "\n" + "\n".join(usernames)
         await bot.edit_message_caption(message_id=message["messageId"],
