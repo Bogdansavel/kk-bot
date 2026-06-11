@@ -170,7 +170,7 @@ def update_round_message(response: Response) -> str:
             user_movie_dict[movie["member"]["username"]] = (user_movie_dict[movie["member"]["username"]] + ", "
                                                             + movie_name)
 
-    text = "\n*бип-боп* я неодушевленный кусок кода\n\nБогдан мне сказал уточнить у вас, можете ли вы принести свои фильмы в это воскресенье? Нажмити внизу на соответствующую кнопку если можете или не можете.\n\nЕсли вы предложили фильм, а я вас тут не отметил - напишите пожалуйтса здесь или моему создателю в личку. Спасибо!"
+    text = "\n*бип-боп* я неодушевленный кусок кода\n\nБогдан мне сказал уточнить у вас, хотите ли вы чтобы мы обсудили предложенный вами фильм в это воскресенье? Нажмити внизу на соответствующую кнопку если можете или не можете.\n\nЕсли вы предложили фильм, а я вас тут не отметил - напишите пожалуйтса здесь или моему создателю в личку. Спасибо!"
 
     for member in user_movie_dict.keys():
         char = "❔"
@@ -371,7 +371,31 @@ async def register(callback_query: CallbackQuery, callback_data: CallBackMethod)
             elif response.json()["limitIsExceeded"] == True:
                 text = "Извините, мест для регистрации больше нет."
             else:
-                text = f"Cпасибо за регистрацию!\n\nЕсли у вас изменятся планы, не забудьте вернуться сюда, и нажать кнопку \"Не приду\"."
+                text = f"Cпасибо за регистрацию!\n\nВнимание, зарегистрировавшись вы обязуетесь заплатить входную стоимость в случае его проведения и наличия вашей регистрации после пятницы. Если у вас изменятся планы, не забудьте вернуться сюда и отменить регистрацию нажав кнопку \"Не приду\". Отменить регистрацию можно только до субботы. Позже кнопка \"Не приду\" лишь уведомит организатора что вас можно не ждать, но он свяжется с вами для оплаты для покрытия аренды. Спасибо за понимание."
+                await update_event_message(response, event_response, kb3)
+    await callback_query.answer(text=text, show_alert=True)
+
+@router.callback_query(CallBackMethod.filter(F.string == 'register'))
+async def register(callback_query: CallbackQuery, callback_data: CallBackMethod):
+    url = baseUrl + '/event/' + callback_data.event_id
+    event_response = requests.get(url)
+    text = "Что-то пошло не так!"
+    if event_response.ok:
+        url = baseUrl + '/register'
+        # photo = callback_query.from_user.get_profile_photos()
+        body = {'telegramId': callback_query.from_user.id, 'username': callback_query.from_user.username, 'firstName': callback_query.from_user.first_name, 'eventId': callback_data.event_id}
+        response = requests.post(url, json=body)
+        kb3 = InlineKeyboardBuilder()
+        kb3.button(text='Приду', callback_data=CallBackMethod(string='register', event_id=callback_data.event_id).pack())
+        kb3.button(text='Не приду', callback_data=CallBackMethod(string='unregister', event_id=callback_data.event_id).pack())
+        kb3.adjust(2)
+        if response.ok:
+            if response.json()["isAlreadyRegistered"] == True:
+                text = "Вы уже зарегестрированы на это мероприятие или такое же в другой день. Чтобы зарегестрироваться сначала отмените предыдущую регистрацию."
+            elif response.json()["limitIsExceeded"] == True:
+                text = "Извините, мест для регистрации больше нет."
+            else:
+                text = f"Cпасибо за регистрацию!\n\nВнимание, зарегистрировавшись вы обязуетесь заплатить входную стоимость в случае его проведения и наличия вашей регистрации после пятницы. Если у вас изменятся планы, не забудьте вернуться сюда и отменить регистрацию нажав кнопку \"Не приду\". Отменить регистрацию можно только до субботы. Позже кнопка \"Не приду\" лишь уведомит организатора что вас можно не ждать, но он свяжется с вами для оплаты для покрытия аренды. Спасибо за понимание."
                 await update_event_message(response, event_response, kb3)
     await callback_query.answer(text=text, show_alert=True)
 
