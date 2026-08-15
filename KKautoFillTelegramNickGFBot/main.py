@@ -1,4 +1,5 @@
 import json
+import random
 
 import requests
 from aiogram import Bot, Dispatcher, types, Router, F
@@ -28,6 +29,27 @@ baseUrl = os.environ['BACKEND_URL']
 group_chat_id = "-1002499953530"
 channel_chat_id = "@kkkrakow"
 rate_chat_id = 173
+
+themes = [
+    "Сюжет",
+    "Главный герой/герои",
+    "Второстепенные герои",
+    "Музыка",
+    "Костюмы, декорации, грим",
+    "Картинка (цвет, свет)",
+    "Операторская работа",
+    "Социальная проблематика",
+    "Монтаж, спец. эффекты",
+    "Правдоподобность (верю/не верю)"
+]
+unassigned_themes_indexes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+assigned_themes = {}
+
+def reassign_themes():
+    for theme in themes:
+        assigned_themes[theme]=None
+    global unassigned_themes_indexes
+    unassigned_themes_indexes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 
 class CallBackMethod(CallbackData, prefix="method-name"):
@@ -205,8 +227,10 @@ async def event(message: types.Message, command: CommandObject):
         kb3 = InlineKeyboardBuilder()
         kb3.button(text='Приду', callback_data=CallBackMethod(string='register', event_id=event_id).pack())
         kb3.button(text='Не приду', callback_data=CallBackMethod(string='unregister', event_id=event_id).pack())
-        kb3.adjust(2)
+        kb3.button(text='Моя тема', callback_data=CallBackMethod(string='theme', event_id=event_id).pack())
+        kb3.adjust(2, 1)
         if response.ok:
+            reassign_themes()
             message = await bot.send_photo(channel_chat_id, photo=URLInputFile(url=response.json()["posterUrl"]),
                                            caption=response.json()["description"],
                                            parse_mode="HTML",
@@ -351,29 +375,22 @@ async def notReady(callback_query: CallbackQuery):
         await callback_query.answer(text="Что-то пошло не так!", show_alert=True)
 
 
-@router.callback_query(CallBackMethod.filter(F.string == 'register'))
-async def register(callback_query: CallbackQuery, callback_data: CallBackMethod):
-    url = baseUrl + '/event/' + callback_data.event_id
+@dp.message(Command("assignThemes"))
+async def assign_themes(message: types.Message):
+    url = baseUrl + '/event/'
     event_response = requests.get(url)
     text = "Что-то пошло не так!"
     if event_response.ok:
-        url = baseUrl + '/register'
-        # photo = callback_query.from_user.get_profile_photos()
-        body = {'telegramId': callback_query.from_user.id, 'username': callback_query.from_user.username, 'firstName': callback_query.from_user.first_name, 'eventId': callback_data.event_id}
-        response = requests.post(url, json=body)
-        kb3 = InlineKeyboardBuilder()
-        kb3.button(text='Приду', callback_data=CallBackMethod(string='register', event_id=callback_data.event_id).pack())
-        kb3.button(text='Не приду', callback_data=CallBackMethod(string='unregister', event_id=callback_data.event_id).pack())
-        kb3.adjust(2)
-        if response.ok:
-            if response.json()["isAlreadyRegistered"] == True:
-                text = "Вы уже зарегестрированы на это мероприятие или такое же в другой день. Чтобы зарегестрироваться сначала отмените предыдущую регистрацию."
-            elif response.json()["limitIsExceeded"] == True:
-                text = "Извините, мест для регистрации больше нет."
-            else:
-                text = f"Cпасибо за регистрацию!\n\nВнимание, зарегистрировавшись вы обязуетесь заплатить входную стоимость в случае его проведения и наличия вашей регистрации после пятницы. Если у вас изменятся планы, не забудьте вернуться сюда и отменить регистрацию нажав кнопку \"Не приду\". Отменить регистрацию можно только до субботы. Позже кнопка \"Не приду\" лишь уведомит организатора что вас можно не ждать, но он свяжется с вами для оплаты для покрытия аренды. Спасибо за понимание."
-                await update_event_message(response, event_response, kb3)
-    await callback_query.answer(text=text, show_alert=True)
+        text = ""
+        reassign_themes()
+        usernames = list(map(lambda m: generate_name(m), event_response.json()['members']))
+        for username in usernames:
+            random_num = random.randint(0, len(unassigned_themes_indexes) - 1)
+            assigned_themes[username] = themes[unassigned_themes_indexes[random_num]]
+            unassigned_themes_indexes.remove(unassigned_themes_indexes[random_num])
+            text = text + "\n" + username + ": " + assigned_themes[username]
+    await message.answer(text=text)
+
 
 @router.callback_query(CallBackMethod.filter(F.string == 'register'))
 async def register(callback_query: CallbackQuery, callback_data: CallBackMethod):
@@ -388,15 +405,31 @@ async def register(callback_query: CallbackQuery, callback_data: CallBackMethod)
         kb3 = InlineKeyboardBuilder()
         kb3.button(text='Приду', callback_data=CallBackMethod(string='register', event_id=callback_data.event_id).pack())
         kb3.button(text='Не приду', callback_data=CallBackMethod(string='unregister', event_id=callback_data.event_id).pack())
-        kb3.adjust(2)
+        kb3.button(text='Моя тема', callback_data=CallBackMethod(string='theme', event_id=callback_data.event_id).pack())
+        kb3.adjust(2, 1)
         if response.ok:
             if response.json()["isAlreadyRegistered"] == True:
-                text = "Вы уже зарегестрированы на это мероприятие или такое же в другой день. Чтобы зарегестрироваться сначала отмените предыдущую регистрацию."
+                text = "Вы уже зарегестрированы на это мероприятие. Чтобы зарегестрироваться сначала отмените предыдущую регистрацию."
             elif response.json()["limitIsExceeded"] == True:
                 text = "Извините, мест для регистрации больше нет."
             else:
-                text = f"Cпасибо за регистрацию!\n\nВнимание, зарегистрировавшись вы обязуетесь заплатить входную стоимость в случае его проведения и наличия вашей регистрации после пятницы. Если у вас изменятся планы, не забудьте вернуться сюда и отменить регистрацию нажав кнопку \"Не приду\". Отменить регистрацию можно только до субботы. Позже кнопка \"Не приду\" лишь уведомит организатора что вас можно не ждать, но он свяжется с вами для оплаты для покрытия аренды. Спасибо за понимание."
+                random_num = random.randint(0, len(unassigned_themes_indexes)-1)
+                assigned_themes[callback_query.from_user.username] = themes[unassigned_themes_indexes[random_num]]
+                unassigned_themes_indexes.remove(unassigned_themes_indexes[random_num])
+
+                text = f"Cпасибо за регистрацию! Ваша тема - {themes[random_num]}. После фильма просто расскажите свои впечатления о фильме с перспективы этой темы.\n\nЕсли у вас изменятся планы, не забудьте вернуться сюда и отменить регистрацию нажав кнопку \"Не приду\". Спасибо!"
                 await update_event_message(response, event_response, kb3)
+    await callback_query.answer(text=text, show_alert=True)
+
+
+@router.callback_query(CallBackMethod.filter(F.string == 'theme'))
+async def to_theme(callback_query: CallbackQuery, callback_data: CallBackMethod):
+    username = callback_query.from_user.username
+    theme = assigned_themes.get(username)
+    if theme is None:
+        text = "Для получения темы сначала зарегестрируйтесь!"
+    else:
+        text = f"Ваша тема - {theme}. После фильма просто расскажите свои впечатления о фильме с перспективы этой темы."
     await callback_query.answer(text=text, show_alert=True)
 
 
@@ -412,8 +445,13 @@ async def unregister(callback_query: CallbackQuery, callback_data: CallBackMetho
         kb3 = InlineKeyboardBuilder()
         kb3.button(text='Приду', callback_data=CallBackMethod(string='register', event_id=callback_data.event_id).pack())
         kb3.button(text='Не приду', callback_data=CallBackMethod(string='unregister', event_id=callback_data.event_id).pack())
-        kb3.adjust(2)
+        kb3.button(text='Моя тема',
+                   callback_data=CallBackMethod(string='theme', event_id=callback_data.event_id).pack())
+        kb3.adjust(2, 1)
         if response.ok:
+            index = themes.index(assigned_themes[callback_query.from_user.username])
+            assigned_themes.pop(callback_query.from_user.username)
+            unassigned_themes_indexes.append(index)
             text = "Регистрация отменена.\nCпасибо что уведомили!"
             await update_event_message(response, event_response, kb3)
         elif response.status_code == 404:
@@ -424,7 +462,7 @@ async def unregister(callback_query: CallbackQuery, callback_data: CallBackMetho
 async def update_event_message(response: Response, event_response: Response, kb1: InlineKeyboardBuilder):
     usernames = list(map(lambda m: generate_name(m), response.json()['members']))
     for message in response.json()["messages"]:
-        final_caption = event_response.json()["description"] + f"\n\n{response.json()['membersCount']}/20 зарегистрировано"
+        final_caption = event_response.json()["description"] + f"\n\n{response.json()['membersCount']}/10 зарегистрировано"
         if message["chatId"] == "-1002499953530":
             final_caption = final_caption + "\n" + "\n".join(usernames)
         await bot.edit_message_caption(message_id=message["messageId"],
